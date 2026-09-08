@@ -97,7 +97,7 @@ let currentMarker = null;
 let previousPosition = null;
 let watchId = null;
 // ================================================== // СОЗДАЁМ КАРТУ // ==================================================
-map = L.map("map").setViev([20, 0],2);
+map = L.map("map").setView([20, 0],2);
 L.tileLayer( "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors" } ).addTo(map);
 // ================================================== // КНОПКА УСТАНОВКИ ЦЕЛИ // ==================================================
 document .getElementById("targetButton") .addEventListener( "click", setTarget );
