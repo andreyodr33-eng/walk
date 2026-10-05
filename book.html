@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d6efd">
+    <title>Блокнот</title>
+    <link rel="manifest" href="manifest.json" />
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <style>
+
+        body {
+            background: #f8f9fa;
+        }
+
+        .section-card {
+            height: 90px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .section-card .card-body {
+            height: 100%;
+            padding: 12px 45px 10px 15px;
+        }
+
+        .section-letter {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .section-preview {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .delete-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            background: transparent;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .delete-button:hover {
+            transform: scale(1.1);
+        }
+
+        #sectionContent {
+            min-height: 300px;
+            resize: vertical;
+        }
+
+        #editorLetter {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container py-3">
+
+    <!-- ГЛАВНЫЙ ЭКРАН -->
+
+    <div id="mainScreen">
+
+        <h3 class="text-center mb-3">
+            Блокнот
+        </h3>
+
+        <div id="sectionsContainer"
+             class="row g-2">
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+
+            <button
+                id="exportButton"
+                class="btn btn-outline-primary flex-fill">
+                Экспорт
+            </button>
+
+            <button
+                id="importButton"
+                class="btn btn-outline-secondary flex-fill">
+                Импорт
+            </button>
+
+        </div>
+
+        <input
+            type="file"
+            id="fileInput"
+            accept=".json"
+            style="display:none">
+
+    </div>
+
+
+    <!-- РЕДАКТОР -->
+
+    <div id="editorScreen"
+         style="display:none">
+
+        <button
+            id="backButton"
+            class="btn btn-secondary mb-3">
+            ← Назад
+        </button>
+
+        <div id="editorLetter"></div>
+
+        <textarea
+            id="sectionContent"
+            class="form-control"
+            placeholder="Введите текст..."
+            rows="12">
+        </textarea>
+
+        <div class="d-flex gap-2 mt-3">
+
+            <button
+                id="saveButton"
+                class="btn btn-primary flex-fill">
+                Сохранить
+            </button>
+
+            <button
+                id="clearButton"
+                class="btn btn-outline-danger flex-fill">
+                Очистить содержимое
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const DB_NAME = "NotebookDB";
+const DB_VERSION = 2;
+const STORE_NAME = "sections";
+
+const alphabet = [
+    "А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М",
+    "Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ",
+    "Ы","Ь","Э","Ю","Я"
+];
+
+let db = null;
+
+let currentSectionId = null;
+let currentSectionLetter = null;
+
+
+/* =========================
+   ОТКРЫТИЕ DATABASE
+   ========================= */
+
+function openDatabase() {
+
+    return new Promise(function(resolve, reject) {
+
+        const request =
+            indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = function(event) {
+
+            db = request.result;
+
+            let store;
+
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+
+                store = db.createObjectStore(
+                    STORE_NAME,
+                    {
+                        keyPath: "id",
+                        autoIncrement: true
+                    }
+                );
+
+            } else {
+
+                store =
+                    event.target.transaction
+                        .objectStore(STORE_NAME);
+            }
+
+            /*
+             * Добавляем отсутствующие буквы.
+             * Существующие записи не трогаем.
+             */
+
+            const getAllRequest =
+                store.getAll();
+
+            getAllRequest.onsuccess = function() {
+
+                const records =
+                    getAllRequest.result || [];
+
+                const existingLetters =
+                    new Set(
+                        records.map(function(item) {
+                            return item.letter;
+                        })
+                    );
+
+                alphabet.forEach(function(letter) {
+
+                    if (!existingLetters.has(letter)) {
+
+                        store.add({
+                            letter: letter,
+                            content: ""
+                        });
+                    }
+
+                });
+
+            };
+
+        };
+
+        request.onsuccess = function() {
+
+            db = request.result;
+
+            initializeLetters()
+                .then(resolve)
+                .catch(reject);
+
+        };
+
+        request.onerror = function() {
+
+            reject(request.error);
+
+        };
+
+    });
+
+}
+
+
+/* =========================
+   СОЗДАНИЕ НЕДОСТАЮЩИХ БУКВ
+   ========================= */
+
+function initializeLetters() {
+
+    return new Promise(function(resolve, reject) {
+
+        const transaction =
+            db.transaction(STORE_NAME, "readwrite");
+
+        const store =
+            transaction.objectStore(STORE_NAME);
+
+        const request =
+            store.getAll();
+
+        request.onsuccess = function() {
+
+            const records =
+                request.result || [];
+
+            const existingLetters =
+                new Set(
+                    records.map(function(item) {
+                        return item.letter;
+                    })
+                );
+
+            alphabet.forEach(function(letter) {
+
+                if (!existingLetters.has(letter)) {
+
+                    store.add({
+                        letter: letter,
+                        content: ""
+                    });
+
+                }
+
+            });
+
+        };
+
+        transaction.oncomplete = function() {
+
+            resolve();
+
+        };
+
+        transaction.onerror = function() {
+
+            reject(transaction.error);
+
+        };
+
+    });
+
+}
+
+
+/* =========================
+   ПОКАЗ ГЛАВНОГО ЭКРАНА
+   ========================= */
+
+function showMainScreen() {
+
+    document.getElementById("editorScreen")
+        .style.display = "none";
+
+    document.getElementById("mainScreen")
+        .style.display = "block";
+
+    renderSections();
+
+}
+
+
+/* =========================
+   ПОКАЗ РЕДАКТОРА
+   ========================= */
+
+function showEditorScreen() {
+
+    document.getElementById("mainScreen")
+        .style.display = "none";
+
+    document.getElementById("editorScreen")
+        .style.display = "block";
+
+}
+
+
+/* =========================
+   ОТРИСОВКА КАРТОЧЕК
+   ========================= */
+
+function renderSections() {
+
+    const container =
+        document.getElementById("sectionsContainer");
+
+    container.innerHTML = "";
+
+    const transaction =
+        db.transaction(STORE_NAME, "readonly");
+
+    const store =
+        transaction.objectStore(STORE_NAME);
+
+    const request =
+        store.getAll();
+
+    request.onsuccess = function() {
+
+        const records =
+            request.result || [];
+
+        /*
+         * Сортируем строго по алфавиту.
+         */
+
+        records.sort(function(a, b) {
+
+            return alphabet.indexOf(a.letter)
+                - alphabet.indexOf(b.letter);
+
+        });
+
+        records.forEach(function(section) {
+
+            const firstLine =
+                (section.content || "")
+                    .split(/\r?\n/)[0]
+                    .trim();
+
+            /*
+             * На карточке максимум 25 символов.
+             * Сам текст записи НЕ обрезается.
+             */
+
+            const preview =
+                firstLine.length > 25
+                    ? firstLine.substring(0, 25) + "…"
+                    : firstLine;
+
+            const col =
+                document.createElement("div");
+
+            col.className =
+                "col-12 col-sm-6 col-md-4";
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "card section-card shadow-sm";
+
+            card.onclick = function() {
+
+                openSection(section.id);
+
+            };
+
+
+            const body =
+                document.createElement("div");
+
+            body.className =
+                "card-body";
+
+
+            const letter =
+                document.createElement("div");
+
+            letter.className =
+                "section-letter";
+
+            letter.textContent =
+                section.letter;
+
+
+            const previewElement =
+                document.createElement("div");
+
+            previewElement.className =
+                "section-preview";
+
+            previewElement.textContent =
+                preview;
+
+
+            const deleteButton =
+                document.createElement("button");
+
+            deleteButton.className =
+                "delete-button";
+
+            deleteButton.innerHTML =
+                "🗑️";
+
+            deleteButton.title =
+                "Очистить содержимое";
+
+
+            /*
+             * Очень важно:
+             * клик по корзине не должен открывать редактор.
+             */
+
+            deleteButton.onclick =
+                function(event) {
+
+                    event.stopPropagation();
+
+                    clearCard(section.id);
+
+                };
+
+
+            body.appendChild(letter);
+            body.appendChild(previewElement);
+
+            card.appendChild(body);
+            card.appendChild(deleteButton);
+
+            col.appendChild(card);
+
+            container.appendChild(col);
+
+        });
+
+    };
+
+}
+
+
+/* =========================
+   ОТКРЫТИЕ БУКВЫ
+   ========================= */
+
+function openSection(id) {
+
+    currentSectionId = id;
+
+    const transaction =
+        db.transaction(STORE_NAME, "readonly");
+
+    const store =
+        transaction.objectStore(STORE_NAME);
+
+    const request =
+        store.get(id);
+
+    request.onsuccess = function() {
+
+        const section =
+            request.result;
+
+        if (!section) {
+            return;
+        }
+
+        currentSectionLetter =
+            section.letter;
+
+        document.getElementById("editorLetter")
+            .textContent =
+                section.letter;
+
+        document.getElementById("sectionContent")
+            .value =
+                section.content || "";
+
+        showEditorScreen();
+
+    };
+
+}
+
+
+/* =========================
+   СОХРАНЕНИЕ
+   ========================= */
+
+function saveSection() {
+
+    const content =
+        document.getElementById("sectionContent")
+            .value;
+
+    const transaction =
+        db.transaction(STORE_NAME, "readwrite");
+
+    const store =
+        transaction.objectStore(STORE_NAME);
+
+    store.put({
+
+        id: currentSectionId,
+
+        letter: currentSectionLetter,
+
+        content: content
+
+    });
+
+    transaction.oncomplete = function() {
+
+        showMainScreen();
+
+    };
+
+}
+
+
+/* =========================
+   ОЧИСТКА ИЗ РЕДАКТОРА
+   ========================= */
+
+function clearEditor() {
+
+    document.getElementById("sectionContent")
+        .value = "";
+
+}
+
+
+/* =========================
+   ОЧИСТКА КАРТОЧКИ
+   ========================= */
+
+function clearCard(id) {
+
+    const confirmed =
+        confirm("Очистить содержимое этой записи?");
+
+    if (!confirmed) {
+        return;
+    }
+
+    const transaction =
+        db.transaction(STORE_NAME, "readwrite");
+
+    const store =
+        transaction.objectStore(STORE_NAME);
+
+    const request =
+        store.get(id);
+
+    request.onsuccess = function() {
+
+        const section =
+            request.result;
+
+        if (!section) {
+            return;
+        }
+
+        section.content = "";
+
+        store.put(section);
+
+    };
+
+    transaction.oncomplete = function() {
+
+        renderSections();
+
+    };
+
+}
+
+
+/* =========================
+   ЭКСПОРТ JSON
+   ========================= */
+
+function exportJSON() {
+
+    const transaction =
+        db.transaction(STORE_NAME, "readonly");
+
+    const store =
+        transaction.objectStore(STORE_NAME);
+
+    const request =
+        store.getAll();
+
+    request.onsuccess = function() {
+
+        const data = {
+
+            version: 2,
+
+            sections:
+                request.result
+
+        };
+
+        const json =
+            JSON.stringify(
+                data,
+                null,
+                2
+            );
+
+        const blob =
+            new Blob(
+                [json],
+                {
+                    type:
+                        "application/json"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = url;
+
+        link.download =
+            "notebook-backup.json";
+
+        link.click();
+
+        URL.revokeObjectURL(url);
+
+    };
+
+}
+
+
+/* =========================
+   ИМПОРТ JSON
+   ========================= */
+
+function importJSON(file) {
+
+    if (!file) {
+        return;
+    }
+
+    const reader =
+        new FileReader();
+
+    reader.onload = function(event) {
+
+        try {
+
+            const data =
+                JSON.parse(event.target.result);
+
+            if (!data.sections ||
+                !Array.isArray(data.sections)) {
+
+                alert("Неверный формат JSON.");
+
+                return;
+            }
+
+            const confirmed =
+                confirm(
+                    "Импорт заменит текущие записи. Продолжить?"
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+            const transaction =
+                db.transaction(
+                    STORE_NAME,
+                    "readwrite"
+                );
+
+            const store =
+                transaction.objectStore(STORE_NAME);
+
+            /*
+             * Очищаем старые записи.
+             */
+
+            store.clear();
+
+            /*
+             * Создаём все буквы.
+             */
+
+            alphabet.forEach(function(letter) {
+
+                const imported =
+                    data.sections.find(
+                        function(item) {
+                            return item.letter === letter;
+                        }
+                    );
+
+                store.add({
+
+                    letter: letter,
+
+                    content:
+                        imported
+                            ? (imported.content || "")
+                            : ""
+
+                });
+
+            });
+
+            transaction.oncomplete =
+                function() {
+
+                    renderSections();
+
+                    alert(
+                        "Импорт завершён."
+                    );
+
+                };
+
+        } catch (error) {
+
+            alert(
+                "Ошибка чтения JSON."
+            );
+
+            console.error(error);
+
+        }
+
+    };
+
+    reader.readAsText(file);
+
+}
+
+
+/* =========================
+   СОБЫТИЯ КНОПОК
+   ========================= */
+
+document.getElementById("saveButton")
+    .onclick =
+        saveSection;
+
+
+document.getElementById("clearButton")
+    .onclick =
+        clearEditor;
+
+
+document.getElementById("backButton")
+    .onclick =
+        showMainScreen;
+
+
+document.getElementById("exportButton")
+    .onclick =
+        exportJSON;
+
+
+document.getElementById("importButton")
+    .onclick =
+        function() {
+
+            document.getElementById("fileInput")
+                .click();
+
+        };
+
+
+document.getElementById("fileInput")
+    .onchange =
+        function() {
+
+            importJSON(
+                this.files[0]
+            );
+
+            this.value = "";
+
+        };
+
+
+/* =========================
+   ЗАПУСК
+   ========================= */
+
+openDatabase()
+    .then(function() {
+
+        showMainScreen();
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "IndexedDB error:",
+            error
+        );
+
+        alert(
+            "Ошибка открытия базы данных."
+        );
+
+    });
+
+
+/*
+ * Service Worker пока НЕ регистрируем,
+ * потому что при открытии файла через file://
+ * браузер выдаёт ошибку origin 'null'.
+ *
+ * Когда разместим приложение на GitHub Pages,
+ * регистрацию вернём.
+ */
+
+</script>
+
+</body>
+</html>
+
