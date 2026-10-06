@@ -70,14 +70,8 @@
         .editor-buttons {
             margin-top: auto;
         }
-        #editorLetter {
-            font-size: 28px;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 15px;
-        }
- 
-.delete-button {
+        
+ .delete-button {
     border: none;
     background: transparent;
     font-size: 20px;
@@ -559,11 +553,7 @@ function openSection(id) {
         currentSectionLetter =
             section.letter;
 
-        document.getElementById("editorLetter")
-            .textContent =
-                section.letter;
-
-        document.getElementById("sectionContent")
+     document.getElementById("sectionContent")
             .value =
                 section.content || "";
 
