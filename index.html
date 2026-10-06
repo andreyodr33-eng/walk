@@ -519,12 +519,12 @@ letter.textContent =
                 };
 
 
-            body.appendChild(letter);
-            body.appendChild(previewElement);
+            sideArea.appendChild(letter);
+            sideArea.appendChild(deleteButton);
 
+            body.appendChild(contentArea);
+            body.appendChild(sideArea);
             card.appendChild(body);
-            card.appendChild(deleteButton);
-
             col.appendChild(card);
 
             container.appendChild(col);
