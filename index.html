@@ -59,10 +59,14 @@
             resize: vertical;
         }
        #editorScreen {
-           min-height: 100vh;
+           height: calc(100vh - 24px);
            display: flex;
            flex-direction: column;
        } 
+        #sectionContent {
+            flex: 1;
+            min-height: 0;
+        }    
         .editor-buttons {
             margin-top: auto;
         }
