@@ -395,20 +395,20 @@ function renderSections() {
         });
 
         records.forEach(function(section) {
-
-            const lines =
-                (section.content || "")
-                    .split(/\r?\n/)
-                    
-
             /*
-             * На карточке максимум 25 символов.
+             * На карточке 80 символов.
              * Сам текст записи НЕ обрезается.
              */
+             const preview =
+                (section.content || "")
+                   .replace(/\r?\n/g, " ")
+                   .trim();
 
-            const line1 = lines[0] || "";
-            const line2 = lines[1] || "";
-            const line3 = lines[2] || "";    
+          const shortPreview =
+                preview.length > 80
+                  ? preview.substring(0, 80) + "..."
+                  : preview;
+               
 
             const col =
                 document.createElement("div");
