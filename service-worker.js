@@ -1,7 +1,7 @@
  const CACHE_NAME = "notebook-v1";
  const FILES_TO_CACHE = [
    "./",
-   "./блокнот.html",
+   "./index.html",
    "./manifest.json",
    "./icon-192.png",
    "./icon-512.png" 
