@@ -432,24 +432,63 @@ function renderSections() {
                 "card-body";
 
 
-            const letter =
-                document.createElement("div");
+        const contentArea =
+                   document.createElement("div");
 
-            letter.className =
-                "section-letter";
-
-            letter.textContent =
-                section.letter;
+         contentArea.className =
+                    "content-area";
 
 
-            const previewElement =
-                document.createElement("div");
+         const row1 =
+                  document.createElement("div");
 
-            previewElement.className =
-                "section-preview";
+         row1.className =
+             "preview-line";
 
-            previewElement.textContent =
-                preview;
+         row1.textContent =
+              line1;
+
+
+const row2 =
+    document.createElement("div");
+
+row2.className =
+    "preview-line";
+
+row2.textContent =
+    line2;
+
+
+const row3 =
+    document.createElement("div");
+
+row3.className =
+    "preview-line";
+
+row3.textContent =
+    line3;
+
+
+contentArea.appendChild(row1);
+contentArea.appendChild(row2);
+contentArea.appendChild(row3);
+
+
+const sideArea =
+    document.createElement("div");
+
+sideArea.className =
+    "side-area";
+
+
+const letter =
+    document.createElement("div");
+
+letter.className =
+    "section-letter";
+
+letter.textContent =
+    section.letter;
 
 
             const deleteButton =
