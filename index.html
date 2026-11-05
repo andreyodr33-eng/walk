@@ -597,7 +597,39 @@ function openSection(id) {
 
 }
 
+async function shareSection() {
+const editor =
+    document.getElementById("sectionContent");
 
+const selectedText =
+    editor.value.substring(
+        editor.selectionStart,
+        editor.selectionEnd
+    ).trim();
+
+const text =
+    selectedText || editor.value.trim();
+
+if (!text) return;
+
+if (navigator.share) {
+
+    try {
+        await navigator.share({
+            text: text
+        });
+    } catch (error) {
+        if (error.name !== "AbortError") {
+            console.error(error);
+        }
+    }
+
+} else {
+
+    await navigator.clipboard.writeText(text);
+
+}
+}
 /* =========================
    СОХРАНЕНИЕ
    ========================= */
