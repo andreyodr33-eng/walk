@@ -751,7 +751,9 @@ function exportJSON() {
     };
 
 }
-
+function printSection() {
+    window.print();
+}    
 
 /* =========================
    ИМПОРТ JSON
@@ -876,6 +878,11 @@ document.getElementById("clearButton")
 document.getElementById("backButton")
     .onclick =
         showMainScreen;
+    
+document.getElementById("printButton")
+    .onclick =
+        printSection;
+    
 
 
 document.getElementById("exportButton")
