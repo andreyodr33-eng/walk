@@ -974,6 +974,34 @@ if ("serviceWorker" in navigator) {
 }
 
 </script>
+<div class="modal-header">
+            <h5 class="modal-title">Очистить содержимое?</h5>
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+            </button>
+        </div>
+
+        <div class="modal-body">
+            Вы действительно хотите удалить всё содержимое?
+        </div>
+
+        <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+                Отмена
+            </button>
+
+            <button type="button"
+                    class="btn btn-danger"
+                    id="confirmClearButton">
+                Очистить
+            </button>
+        </div>
+
+    </div>
+</div>    
 </body>
 </html>
 
