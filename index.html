@@ -912,7 +912,18 @@ document.getElementById("fileInput")
 
         };
 
+const clearModal = new bootstrap.Modal(
+    document.getElementById("clearConfirmModal")
+);
 
+document.getElementById("clearButton").onclick = function() {
+    clearModal.show();
+};
+
+document.getElementById("confirmClearButton").onclick = function() {
+    clearSection();
+    clearModal.hide();
+};
 /* =========================
    ЗАПУСК
    ========================= */
